@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from 'react';
 
 export default function PublicFormPage() {
@@ -9,7 +8,11 @@ export default function PublicFormPage() {
     email: '',
     linkedin: '',
     visas: [] as string[],
+    additionalInfo: '',
   });
+
+  
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   
   const handleInputChange = (
@@ -21,15 +24,46 @@ export default function PublicFormPage() {
     });
   };
 
-  
+  // Файл
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setResumeFile(e.target.files[0]);
+    }
+  };
+
+  // Visas (multiple select)
+  const handleVisasChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedOptions = Array.from(e.target.selectedOptions).map(opt => opt.value);
+    setFormData({ ...formData, visas: selectedOptions });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
+      
+      const dataToSend = new FormData();
+      dataToSend.append('firstName', formData.firstName);
+      dataToSend.append('lastName', formData.lastName);
+      dataToSend.append('email', formData.email);
+      dataToSend.append('linkedin', formData.linkedin);
+      dataToSend.append('additionalInfo', formData.additionalInfo);
+
+      
+      formData.visas.forEach((visa) => {
+        dataToSend.append('visas', visa);
+      });
+
+      
+      if (resumeFile) {
+        dataToSend.append('resume', resumeFile);
+      }
+
       const response = await fetch('/api/leads', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: dataToSend,
       });
+
       if (response.ok) {
         alert('Your information was submitted successfully!');
       } else {
@@ -39,15 +73,6 @@ export default function PublicFormPage() {
       console.error(err);
       alert('Network error');
     }
-  };
-
-  
-  const handleVisasChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    // 
-    const selectedOptions = Array.from(e.target.selectedOptions).map(
-      (opt) => opt.value
-    );
-    setFormData({ ...formData, visas: selectedOptions });
   };
 
   return (
@@ -85,13 +110,14 @@ export default function PublicFormPage() {
           value={formData.linkedin}
           onChange={handleInputChange}
         />
-
+        
+        {/* Multiple-select for visas */}
         <label htmlFor="visas">Select Visa Categories of Interest:</label>
         <select
           id="visas"
           name="visas"
           multiple
-          value={formData.visas} // массив
+          value={formData.visas}
           onChange={handleVisasChange}
         >
           <option value="F1">F1</option>
@@ -99,6 +125,24 @@ export default function PublicFormPage() {
           <option value="EB-3">EB-3</option>
           <option value="I don’t know">I don’t know</option>
         </select>
+
+        {/* Additional Info */}
+        <textarea
+          name="additionalInfo"
+          placeholder="Additional Information"
+          value={formData.additionalInfo}
+          onChange={handleInputChange}
+          rows={4}
+        />
+
+        {/* File upload */}
+        <label htmlFor="resume">Upload Resume/CV:</label>
+        <input
+          type="file"
+          name="resume"
+          accept=".pdf,.doc,.docx"
+          onChange={handleFileChange}
+        />
 
         <button type="submit">Submit</button>
       </form>
